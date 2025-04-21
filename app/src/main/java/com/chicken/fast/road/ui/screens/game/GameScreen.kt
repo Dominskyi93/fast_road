@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -94,9 +95,7 @@ fun RunningGame(
         remember { mutableStateOf(List(12) { GameItem.EMPTY }) }
     var seconds by remember { mutableIntStateOf(60) }
     var isRunning by remember { mutableStateOf(false) }
-    val mediaPlayer = MediaPlayer.create(context, R.raw.music).apply {
-        isLooping = true
-    }
+    val mediaPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
 
     LaunchedEffect(seconds, isRunning) {
         if (isRunning) {
@@ -109,8 +108,12 @@ fun RunningGame(
 
     LaunchedEffect(isRunning) {
         if (SharPreference(context).getMusicEnabled() && isRunning) {
-            mediaPlayer.start()
+            val player = MediaPlayer.create(context, R.raw.music)
+            player?.isLooping = true
+            player?.start()
+            mediaPlayer.value = player
         }
+
         if (isRunning) {
             while (seconds != 0) {
                 delay(delay)
@@ -125,6 +128,13 @@ fun RunningGame(
                 gameItems.value = newItems
             }
             onGameOver(score)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer.value?.stop()
+            mediaPlayer.value?.release()
         }
     }
 
